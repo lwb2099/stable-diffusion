@@ -4,6 +4,7 @@ import time
 import torch
 import torchvision
 import pytorch_lightning as pl
+# from lightning_utilities.core.rank_zero import rank_zero_only
 
 from packaging import version
 from omegaconf import OmegaConf
@@ -659,7 +660,7 @@ if __name__ == "__main__":
         trainer = Trainer.from_argparse_args(trainer_opt, **trainer_kwargs)
         trainer.logdir = logdir  ###
 
-        # data
+        # get image-net data
         data = instantiate_from_config(config.data)
         # NOTE according to https://pytorch-lightning.readthedocs.io/en/latest/datamodules.html
         # calling these ourselves should not be necessary but it is.

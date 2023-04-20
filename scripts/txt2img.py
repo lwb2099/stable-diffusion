@@ -13,7 +13,8 @@ import time
 from pytorch_lightning import seed_everything
 from torch import autocast
 from contextlib import contextmanager, nullcontext
-
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
@@ -163,13 +164,13 @@ def main():
     parser.add_argument(
         "--H",
         type=int,
-        default=512,
+        default=256,
         help="image height, in pixel space",
     )
     parser.add_argument(
         "--W",
         type=int,
-        default=512,
+        default=256,
         help="image width, in pixel space",
     )
     parser.add_argument(
@@ -187,7 +188,7 @@ def main():
     parser.add_argument(
         "--n_samples",
         type=int,
-        default=3,
+        default=2,
         help="how many samples to produce for each given prompt. A.k.a. batch size",
     )
     parser.add_argument(
