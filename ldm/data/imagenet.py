@@ -379,6 +379,11 @@ class ImageNetSRTrain(ImageNetSR):
     def get_base(self):
         with open("data/imagenet_train_hr_indices.p", "rb") as f:
             indices = pickle.load(f)
+        
+        """
+        @lwb: 修改indices，使得所有的索引都小于9369(imagenette子数据集的大小)-1
+        """
+        indices = [i for i in indices if i < 9369]
         dset = ImageNetTrain(process_images=False,)
         return Subset(dset, indices)
 
@@ -390,5 +395,9 @@ class ImageNetSRValidation(ImageNetSR):
     def get_base(self):
         with open("data/imagenet_val_hr_indices.p", "rb") as f:
             indices = pickle.load(f)
+        """
+        @lwb: 修改indices，使得所有的索引都小于9369(imagenette子数据集的大小)-1
+        """
+        indices = [i for i in indices if i < 3925]
         dset = ImageNetValidation(process_images=False,)
         return Subset(dset, indices)

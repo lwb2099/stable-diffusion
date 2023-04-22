@@ -141,7 +141,6 @@ class WrappedDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        print(f"WrappedDataset: idx={idx}")
         return self.data[idx]
 
 
@@ -167,8 +166,9 @@ class DataModuleFromConfig(pl.LightningDataModule):
                  shuffle_val_dataloader=False):
         super().__init__()
         self.batch_size = batch_size
-        self.dataset_configs = dict()
-        self.num_workers = 0  # num_workers if num_workers is not None else batch_size * 2
+        self.datasets = None
+        self.dataset_configs = {}
+        self.num_workers = num_workers if num_workers is not None else batch_size * 2
         self.use_worker_init_fn = use_worker_init_fn
         if train is not None:
             self.dataset_configs["train"] = train
@@ -189,9 +189,10 @@ class DataModuleFromConfig(pl.LightningDataModule):
             instantiate_from_config(data_cfg)
 
     def setup(self, stage=None):
-        self.datasets = dict(
-            (k, instantiate_from_config(self.dataset_configs[k]))
-            for k in self.dataset_configs)
+        self.datasets = {
+            k: instantiate_from_config(self.dataset_configs[k])
+            for k in self.dataset_configs
+        }
         if self.wrap:
             for k in self.datasets:
                 self.datasets[k] = WrappedDataset(self.datasets[k])
@@ -202,6 +203,14 @@ class DataModuleFromConfig(pl.LightningDataModule):
             init_fn = worker_init_fn
         else:
             init_fn = None
+        """
+        @lwb: 使得pytorch lightning的train data不随机sample(默认train是随机sample的, val和test不随机)
+        """
+        # trainer.replace_sampler_ddp = False
+        # sampler = torch.utils.data.distributed.DistributedSampler(self.datasets['train'], shuffle=False)
+        # return DataLoader(self.datasets["train"], batch_size=self.batch_size,
+        #                   num_workers=self.num_workers, shuffle=False, # if is_iterable_dataset else True,
+        #                   sampler=sampler, worker_init_fn=init_fn)
         return DataLoader(self.datasets["train"], batch_size=self.batch_size,
                           num_workers=self.num_workers, shuffle=False, # if is_iterable_dataset else True,
                           worker_init_fn=init_fn)
@@ -520,7 +529,7 @@ if __name__ == "__main__":
         # merge trainer cli with config
         trainer_config = lightning_config.get("trainer", OmegaConf.create())
         # default to ddp
-        # trainer_config["accelerator"] = "ddp"
+        trainer_config["accelerator"] = "ddp"
         for k in nondefault_trainer_args(opt):
             trainer_config[k] = getattr(opt, k)
         if not "gpus" in trainer_config:
@@ -659,6 +668,7 @@ if __name__ == "__main__":
         trainer_kwargs["callbacks"] = [instantiate_from_config(callbacks_cfg[k]) for k in callbacks_cfg]
 
         trainer = Trainer.from_argparse_args(trainer_opt, **trainer_kwargs)
+
         trainer.logdir = logdir  ###
 
         # get image-net data
