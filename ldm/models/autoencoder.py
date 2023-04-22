@@ -283,16 +283,9 @@ class VQModelInterface(VQModel):
 
 
 class AutoencoderKL(pl.LightningModule):
-    def __init__(self,
-                 ddconfig,
-                 lossconfig,
-                 embed_dim,
-                 ckpt_path=None,
-                 ignore_keys=[],
-                 image_key="image",
-                 colorize_nlabels=None,
-                 monitor=None,
-                 ):
+    def __init__(self, ddconfig, lossconfig, embed_dim, ckpt_path=None, ignore_keys=None, image_key="image", colorize_nlabels=None, monitor=None):
+        if ignore_keys is None:
+            ignore_keys = []
         super().__init__()
         self.image_key = image_key
         self.encoder = Encoder(**ddconfig)
