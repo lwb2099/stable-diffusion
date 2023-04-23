@@ -8,3 +8,4 @@ src/taming-transformers
 logs
 taming
 src
+*.ckpt

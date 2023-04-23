@@ -21,7 +21,7 @@ class LPIPSWithDiscriminator(nn.Module):
         self.perceptual_weight = perceptual_weight
         # output log variance
         self.logvar = nn.Parameter(torch.ones(size=()) * logvar_init)
-
+        # @lwb: patchGAN: 对图片的每一块，决策是真的还是假的
         self.discriminator = NLayerDiscriminator(input_nc=disc_in_channels,
                                                  n_layers=disc_num_layers,
                                                  use_actnorm=use_actnorm
@@ -34,6 +34,8 @@ class LPIPSWithDiscriminator(nn.Module):
 
     def calculate_adaptive_weight(self, nll_loss, g_loss, last_layer=None):
         if last_layer is not None:
+        # nll_grads: grad of rec loss of last layer
+        # g_loss: grad of GAN loss of last layer
             nll_grads = torch.autograd.grad(nll_loss, last_layer, retain_graph=True)[0]
             g_grads = torch.autograd.grad(g_loss, last_layer, retain_graph=True)[0]
         else:
@@ -48,9 +50,11 @@ class LPIPSWithDiscriminator(nn.Module):
     def forward(self, inputs, reconstructions, posteriors, optimizer_idx,
                 global_step, last_layer=None, cond=None, split="train",
                 weights=None):
+        # reconstruction loss: [1,3,256,256]
         rec_loss = torch.abs(inputs.contiguous() - reconstructions.contiguous())
         if self.perceptual_weight > 0:
             p_loss = self.perceptual_loss(inputs.contiguous(), reconstructions.contiguous())
+            # plus perceptual loss
             rec_loss = rec_loss + self.perceptual_weight * p_loss
 
         nll_loss = rec_loss / torch.exp(self.logvar) + self.logvar
@@ -67,6 +71,7 @@ class LPIPSWithDiscriminator(nn.Module):
             # generator update
             if cond is None:
                 assert not self.disc_conditional
+                # [1,1,30,30]: 30 patches in total
                 logits_fake = self.discriminator(reconstructions.contiguous())
             else:
                 assert self.disc_conditional
@@ -81,7 +86,8 @@ class LPIPSWithDiscriminator(nn.Module):
                     d_weight = torch.tensor(0.0)
             else:
                 d_weight = torch.tensor(0.0)
-
+            # 0 until global step > threshold then disc_factor(gradually grow)
+            # which means in the first few steps we dont use GAN loss
             disc_factor = adopt_weight(self.disc_factor, global_step, threshold=self.discriminator_iter_start)
             loss = weighted_nll_loss + self.kl_weight * kl_loss + d_weight * disc_factor * g_loss
 
@@ -102,13 +108,14 @@ class LPIPSWithDiscriminator(nn.Module):
             else:
                 logits_real = self.discriminator(torch.cat((inputs.contiguous().detach(), cond), dim=1))
                 logits_fake = self.discriminator(torch.cat((reconstructions.contiguous().detach(), cond), dim=1))
-
+            # 0 at first then disc factor
             disc_factor = adopt_weight(self.disc_factor, global_step, threshold=self.discriminator_iter_start)
             d_loss = disc_factor * self.disc_loss(logits_real, logits_fake)
 
-            log = {"{}/disc_loss".format(split): d_loss.clone().detach().mean(),
-                   "{}/logits_real".format(split): logits_real.detach().mean(),
-                   "{}/logits_fake".format(split): logits_fake.detach().mean()
-                   }
+            log = {
+                f"{split}/disc_loss": d_loss.clone().detach().mean(),
+                f"{split}/logits_real": logits_real.detach().mean(),
+                f"{split}/logits_fake": logits_fake.detach().mean(),
+            }
             return d_loss, log
 

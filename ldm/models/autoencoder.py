@@ -299,6 +299,7 @@ class AutoencoderKL(pl.LightningModule):
             assert type(colorize_nlabels)==int
             self.register_buffer("colorize", torch.randn(3, colorize_nlabels, 1, 1))
         if monitor is not None:
+            # val/res loss
             self.monitor = monitor
         if ckpt_path is not None:
             self.init_from_ckpt(ckpt_path, ignore_keys=ignore_keys)
@@ -315,6 +316,7 @@ class AutoencoderKL(pl.LightningModule):
         print(f"Restored from {path}")
 
     def encode(self, x):
+        # [1,6,64,64], 6: mean and standard deviation
         h = self.encoder(x)
         moments = self.quant_conv(h)
         posterior = DiagonalGaussianDistribution(moments)
@@ -323,14 +325,17 @@ class AutoencoderKL(pl.LightningModule):
     def decode(self, z):
         z = self.post_quant_conv(z)
         dec = self.decoder(z)
+        # [1,3,256,256]
         return dec
 
-    def forward(self, input, sample_posterior=True):
+    def forward(self, input, sample_posterior=True):   
         posterior = self.encode(input)
         if sample_posterior:
             z = posterior.sample()
         else:
             z = posterior.mode()
+        # sample: z = mean + std*randn
+        # [1,3,64,64]
         dec = self.decode(z)
         return dec, posterior
 
@@ -342,8 +347,9 @@ class AutoencoderKL(pl.LightningModule):
         return x
 
     def training_step(self, batch, batch_idx, optimizer_idx):
+        # batch: [1,256,256,3]
         inputs = self.get_input(batch, self.image_key)
-        reconstructions, posterior = self(inputs)
+        reconstructions, posterior = self(inputs)  # same as calling forward
 
         if optimizer_idx == 0:
             # train encoder+decoder+logvar
