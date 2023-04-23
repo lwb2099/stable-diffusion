@@ -19,7 +19,7 @@ model:
       params:
         image_size: 32
         in_channels: 3 # 4
-        out_channels: 3 # 4
+        out_channels: 3 # 4, should be the same as the input channels
         model_channels: 128  # 512
         attention_resolutions:
         #note: this isn\t actually the resolution but

@@ -11,9 +11,10 @@ from ldm.modules.diffusionmodules.util import make_ddim_sampling_parameters, mak
 class PLMSSampler(object):
     def __init__(self, model, schedule="linear", **kwargs):
         super().__init__()
+        # LatentDiffusion
         self.model = model
         self.ddpm_num_timesteps = model.num_timesteps
-        self.schedule = schedule
+        self.schedule = schedule  # linear schedule
 
     def register_buffer(self, name, attr):
         if type(attr) == torch.Tensor:
@@ -121,6 +122,7 @@ class PLMSSampler(object):
         device = self.model.betas.device
         b = shape[0]
         if x_T is None:
+            # init noise tensor
             img = torch.randn(shape, device=device)
         else:
             img = x_T
@@ -132,6 +134,7 @@ class PLMSSampler(object):
             timesteps = self.ddim_timesteps[:subset_end]
 
         intermediates = {'x_inter': [img], 'pred_x0': [img]}
+        # reverse cus we sample from a noise
         time_range = list(reversed(range(0,timesteps))) if ddim_use_original_steps else np.flip(timesteps)
         total_steps = timesteps if ddim_use_original_steps else timesteps.shape[0]
         print(f"Running PLMS Sampling with {total_steps} timesteps")
@@ -214,7 +217,7 @@ class PLMSSampler(object):
                 noise = torch.nn.functional.dropout(noise, p=noise_dropout)
             x_prev = a_prev.sqrt() * pred_x0 + dir_xt + noise
             return x_prev, pred_x0
-
+        # predicted noise
         e_t = get_model_output(x, t)
         if len(old_eps) == 0:
             # Pseudo Improved Euler (2nd order)

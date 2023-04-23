@@ -729,6 +729,7 @@ class UNetModel(nn.Module):
 
         h = x.type(self.dtype)
         for module in self.input_blocks:
+            # latent representation, time embedding, condition
             h = module(h, emb, context)
             hs.append(h)
         h = self.middle_block(h, emb, context)
