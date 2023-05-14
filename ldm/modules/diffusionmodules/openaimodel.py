@@ -443,11 +443,11 @@ class UNetModel(nn.Module):
     def __init__(
         self,
         image_size,
-        in_channels,
-        model_channels,
-        out_channels,
-        num_res_blocks,
-        attention_resolutions,
+        in_channels,  # 3
+        model_channels,  # 128
+        out_channels,  # 3
+        num_res_blocks,  # 2
+        attention_resolutions,  # [2,1]
         dropout=0,
         channel_mult=(1, 2, 4, 8),
         conv_resample=True,
@@ -503,6 +503,7 @@ class UNetModel(nn.Module):
         self.num_heads_upsample = num_heads_upsample
         self.predict_codebook_ids = n_embed is not None
 
+        # 512 = 128*4
         time_embed_dim = model_channels * 4
         self.time_embed = nn.Sequential(
             linear(model_channels, time_embed_dim),
@@ -521,11 +522,13 @@ class UNetModel(nn.Module):
             ]
         )
         self._feature_size = model_channels
+        
+        #* up layers
         input_block_chans = [model_channels]
         ch = model_channels
         ds = 1
-        for level, mult in enumerate(channel_mult):
-            for _ in range(num_res_blocks):
+        for level, mult in enumerate(channel_mult):  # 1,2,4,8
+            for _ in range(num_res_blocks):  # 2
                 layers = [
                     ResBlock(
                         ch,
@@ -544,7 +547,7 @@ class UNetModel(nn.Module):
                     else:
                         num_heads = ch // num_head_channels
                         dim_head = num_head_channels
-                    if legacy:
+                    if legacy:  # True
                         #num_heads = 1
                         dim_head = ch // num_heads if use_spatial_transformer else num_head_channels
                     layers.append(
@@ -582,7 +585,7 @@ class UNetModel(nn.Module):
                     )
                 )
                 ch = out_ch
-                input_block_chans.append(ch)
+                input_block_chans.append(ch)  # [128,128,128,128,256,256]
                 ds *= 2
                 self._feature_size += ch
 
@@ -594,6 +597,8 @@ class UNetModel(nn.Module):
         if legacy:
             #num_heads = 1
             dim_head = ch // num_heads if use_spatial_transformer else num_head_channels
+       
+       #* bottoleneck
         self.middle_block = TimestepEmbedSequential(
             ResBlock(
                 ch,
@@ -623,6 +628,7 @@ class UNetModel(nn.Module):
         )
         self._feature_size += ch
 
+        #* down layers
         self.output_blocks = nn.ModuleList([])
         for level, mult in list(enumerate(channel_mult))[::-1]:
             for i in range(num_res_blocks + 1):
@@ -679,6 +685,7 @@ class UNetModel(nn.Module):
                 self.output_blocks.append(TimestepEmbedSequential(*layers))
                 self._feature_size += ch
 
+        #* out
         self.out = nn.Sequential(
             normalization(ch),
             nn.SiLU(),
