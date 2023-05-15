@@ -584,6 +584,7 @@ class UNetModel(nn.Module):
                         )
                     )
                 )
+                #? out_ch = ch and then ch=out_ch is no use
                 ch = out_ch
                 input_block_chans.append(ch)  # [128,128,128,128,256,256]
                 ds *= 2
