@@ -1,11 +1,7 @@
 models/ldm/stable-diffusion-v1/model.ckpt
 outputs/*
-src/*
-src/taming-transformers
 **/__pycache__
 */__pycache__
+__pycache__
 logs
-taming
-src
 *.ckpt
-datasets
