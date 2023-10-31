@@ -1,0 +1,55 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "training-autoencoder",
+            "type": "python",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--base",
+                "configs/autoencoder/autoencoder_kl_64x64x3.yaml", 
+                "-t",
+                "--gpus",
+                "0,"
+            ]
+        },
+        {
+            "name": "training-diffusion",
+            "type": "python",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--base",
+                "configs/latent-diffusion/cin-ldm-vq-f4.yaml", 
+                "-t",
+                "--gpus",
+                "0,1,2"
+            ]
+        },
+        {
+            "name": "sample-txt2img",
+            "type": "python",
+            "request": "launch",
+            "program": "scripts/txt2img.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--plms" // or ddim
+            ]
+        },
+        {
+            "name": "test-current-file",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+        }
+    ]
+}
+
